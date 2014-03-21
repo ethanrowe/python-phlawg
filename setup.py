@@ -28,5 +28,9 @@ setup(
     install_requires=[
         'logstash_formatter',
     ],
+    tests_require=[
+        'mock',
+        'nose',
+    ]
 )
 
