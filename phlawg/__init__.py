@@ -85,3 +85,43 @@ class MetricLogger(object):
         """Log the metrics expressed in keyword arguments at logging.WARN level."""
         return self._level_emit(self.logger.warning, metrics)
 
+
+def to_metric_logger_name(logger_or_name):
+    """Translates a `logger_or_name` to a standardized metrics-oriented logger name.
+
+    If `logger_or_name` is a `logging.Logger`-like object, its `name` is used as the
+    original name string; otherwise, `logger_or_name` is assumed to be a logger name
+    string.
+
+    The metrics logger name translation rules attempt to work well with the hierarchical
+    naming of loggers enforced by the `logging` subsystem.  It will attempt to preserve
+    the base package name of `logger_name` ("foo", in the case of a logger name "foo.blah").
+    But it will attempt to put "metrics" into the name as the second level, such that it is
+    easy within your application logging configuration to handle metrics as a separate stream
+    from standard logs.
+
+    Thus "foo" would go to "foo.metrics", while "foo.bar.baz" would go to "foo.metrics.bar.baz".
+
+    If the logger name is the empty string, then it simply goes to "metrics".
+
+    Parameters:
+        logger_or_name: A standard name string for a logging.Logger, of the sort one
+                        would use with logging.getLogger(), or a logging.Logger-like
+                        object (the name of which is used as the name string).
+
+    Returns the "metrics" name for logger_or_name, according to the rules stated above.
+    """
+
+    if hasattr(logger_or_name, 'name'):
+        logger_or_name = logger_or_name.name
+
+    if len(logger_or_name) > 0:
+       idx = logger_or_name.find('.')
+       if idx == -1:
+           return "%s.metrics" % logger_or_name
+       else:
+           return "%s.metrics%s" % (logger_or_name[:idx], logger_or_name[idx:])
+    else:
+        return 'metrics'
+
+
