@@ -1,4 +1,5 @@
 from nose import tools
+from six import moves
 import mock
 
 import phlawg
@@ -24,7 +25,7 @@ class TestPhlawgMetricLogger(object):
         # integer value (the id of a new mock).
         # The dictionary will have `count` pairs.
         return dict((str(mock.Mock(name='metricName')), id(mock.Mock()))
-                    for i in xrange(count))
+                    for i in moves.xrange(count))
 
     def check_metrics(self, level, **metrics):
         pass

@@ -3,7 +3,7 @@ import os
 
 setup(
     name = "phlawg",
-    version = "0.1.0",
+    version = "0.2.0",
     author = "Ethan Rowe",
     author_email = "ethan@the-rowes.com",
     description = "python logging utilities for transmitting metrics via log streams",
@@ -23,14 +23,17 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.4",
         "Topic :: Utilities",
     ],
     install_requires=[
         'logstash_formatter',
+        'six'
     ],
     tests_require=[
         'mock',
         'nose',
+        'six'
     ]
 )
 
