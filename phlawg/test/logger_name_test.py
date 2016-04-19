@@ -1,5 +1,6 @@
 from nose import tools
 import mock
+import six
 
 import phlawg
 
@@ -16,7 +17,7 @@ NAME_MAP = {
 
 class TestLoggerNames(object):
     def test_name_to_metric_name_translation(self):
-        for original_name, expected_name in NAME_MAP.iteritems():
+        for original_name, expected_name in six.iteritems(NAME_MAP):
             yield self.verify_name_translation, original_name, expected_name
 
     def verify_name_translation(self, original, expected):
@@ -26,7 +27,7 @@ class TestLoggerNames(object):
 
 
     def test_logger_to_metric_name_translation(self):
-        for original_name, expected_name in NAME_MAP.iteritems():
+        for original_name, expected_name in six.iteritems(NAME_MAP):
             yield self.verify_logger_translation, original_name, expected_name
 
 

@@ -1,3 +1,5 @@
+import six
+
 class MetricLogger(object):
     """A wrapper class for logging.Loggers for metric propagation through log streams.
 
@@ -34,7 +36,7 @@ class MetricLogger(object):
 
     def message_and_extra(self, metrics):
         """For each metric/value pair in `metrics`, yields the log message and 'extra' dictionary."""
-        for name, value in metrics.iteritems():
+        for name, value in six.iteritems(metrics):
             yield self.message(name, value), self.extra(name, value)
 
     def message(self, name, value):
