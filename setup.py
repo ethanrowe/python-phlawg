@@ -3,7 +3,7 @@ import os
 
 setup(
     name = "phlawg",
-    version = "0.2.0",
+    version = "0.3.0",
     author = "Ethan Rowe",
     author_email = "ethan@the-rowes.com",
     description = "python logging utilities for transmitting metrics via log streams",
@@ -27,13 +27,13 @@ setup(
         "Topic :: Utilities",
     ],
     install_requires=[
-        'logstash_formatter',
-        'six'
+        'python-json-logger>=0.1.4',
+        'six>=1.9.0'
     ],
     tests_require=[
         'mock',
         'nose',
-        'six'
+        'six>=1.9.0'
     ]
 )
 
