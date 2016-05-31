@@ -1,3 +1,7 @@
+"""
+Functions for configuring the logging system in phlawg-friendly ways.
+"""
+
 from __future__ import absolute_import
 
 import json
@@ -173,6 +177,50 @@ class EnvConf(object):
 
 
 def from_environment(*metric_packages):
+    """
+    Configures python's logging system based on environment variables.
+
+    Supported environment variables:
+        ``PHLAWG_METRIC_FIELDS``: Comma-separated list of log record field names
+            to include in the JSON metric output.
+
+        ``PHLAWG_METRIC_PACKAGES``: Python package/subpackage/module names under
+            which metrics are expected to be logged.  Loggers with suitable
+            qualnames, using the "phlawg_metric_handler" handler, will be added
+            to the configuration.  Names will be converted to metric logger names
+            based on :func:`phlawg.to_metric_logger_name`.
+
+        ``PHLAWG_METRIC_DATE_FORMAT``: The date formatting string to use for the
+            time field within metric logs.
+
+        ``PHLAWG_LOG_FORMAT``: The log format string to use for regular log lines.
+
+        ``PHLAWG_LOG_DATE_FORMAT``: The date formatting string to use for the
+            time field within regular logs.
+
+        ``PHLAWG_LOG_CONFIG``: a full log configuration dictionary as would be
+            passed to :func:`logging.config.dictConfig`, encoded as JSON.  Note
+            that this will be subject to some modification; the
+            "phlawg_metric_handler" and "phlawg_metric_formatter" structures will
+            be ensured, with default definitions if not already present.  Any
+            metric logger names determined via metric package name resolution
+            will be ensured as well within the "loggers" dict.
+
+    Defaults are provided for everything such that no environmental configuration
+    is strictly required in order to use this and get a sensible behavior.
+
+    Metric package names can be expressed both in the ``PHLAWG_METRIC_PACKAGES``
+    environment variable and in the call to this function as positional parameters;
+    these will be merged, and all subject to :func:`phlawg.to_metric_logger_name`
+    in determining the logger/qualname.
+
+    Metric loggers will use the :class:`pythonjsonlogger.jsonlogger.JsonFormatter`
+    formatter to express themselves as JSON dictionaries in the logstream.
+
+    All logs will go to STDERR by default.
+
+    Returns ``True``.
+    """
     logconf.dictConfig(EnvConf(metric_packages).config)
     return True
 
