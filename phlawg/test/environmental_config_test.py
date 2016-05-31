@@ -1,5 +1,6 @@
 import os
 import functools
+import json
 from nose import tools
 import mock
 import six
@@ -206,4 +207,144 @@ def test_metric_date_format_var(env, logconf):
     config.from_environment()
     comparable_call(logconf, expect)
 
+
+def mock_dict():
+    return {
+            str(mock.Mock(name='AKey')): str(mock.Mock(name='AValue'))}
+
+
+def override_case(spec):
+    def wrapper(fn):
+        @functools.wraps(fn)
+        @mocks
+        def wrapped(env, logconf):
+            # Put the specification into the variable as JSON.
+            env[FULL_CONF_VAR] = json.dumps(spec)
+            # Build expectation from JSON (so we get a copy).
+            expect = json.loads(env[FULL_CONF_VAR])
+            expect, packages = fn(expect, env, logconf)
+            # Apply the configuration and verify our expectation.
+            config.from_environment(*packages)
+            comparable_call(logconf, expect)
+        return wrapped
+    return wrapper
+
+@override_case({
+    "loggers": {
+        "metrics": mock_dict(),
+        },
+    "handlers": {
+        "phlawg_metrics_handler": mock_dict(),
+        },
+    "formatters": {
+        "phlawg_metrics_formatter": mock_dict(),
+        },
+    })
+def test_override_full_definition(spec, env, logconf):
+    # If all the metrics needed have loggers, and
+    # metric handler and formatter are both present,
+    # we accept the override JSON definition as-is.
+    
+    # We expect it to add a version for us.
+    spec["version"] = 1
+    return spec, ()
+
+
+@override_case({
+    "loggers": {
+        # It'll accept this
+        "fromenv.metrics.defined": mock_dict(),
+        # And this.
+        "fromapp.metrics.defined": mock_dict(),
+        },
+    "handlers": {
+        "phlawg_metrics_handler": mock_dict(),
+        },
+    "formatters": {
+        "phlawg_metrics_formatter": mock_dict(),
+        },
+    })
+def test_override_with_metric_names(spec, env, logconf):
+    # In this case, we check that it adds a metric logger
+    # for one that was missing, but leaves the ones it
+    # finds alone.
+
+    # Env-level metrics packages requested.
+    env[METRIC_PACKAGES_VAR] = 'fromenv.defined,fromenv.undefined'
+
+    # These guys will be added by the system based on the metrics
+    # packages we requested.
+    for name in ("fromenv.metrics.undefined",
+                 "fromapp.metrics.undefined"):
+        spec["loggers"][name] = metric_log_spec(qualname=name)
+
+    # And of course we expect version 1.
+    spec["version"] = 1
+
+    # App-level metrics packages requested
+    return spec, ("fromapp.defined", "fromapp.undefined")
+
+
+@override_case({
+    "loggers": {
+        "metrics": mock_dict(),
+        },
+    "handlers": {
+        "phlawg_metrics_handler": mock_dict(),
+        "other_metrics_handler": mock_dict(),
+        },
+    "formatters": {
+        "some_formtter": mock_dict(),
+        },
+    })
+def test_override_with_metric_handler(spec, env, logconf):
+    # We should see that it accepts the given metrics handler,
+    # but provides the standard metrics formatter.
+    spec["formatters"]["phlawg_metrics_formatter"] = metric_formatter_spec()
+    spec["version"] = 1
+    return spec, ()
+
+
+@override_case({
+    "loggers": {
+        "metrics": mock_dict(),
+        },
+    "handlers": {
+        "other_handler": mock_dict(),
+        },
+    "formatters": {
+        "phlawg_metrics_formatter": mock_dict(),
+        "other_formatter": mock_dict(),
+        },
+    })
+def test_override_with_metric_formatter(spec, env, logconf):
+    # We should see that it accepts the given metric formatter,
+    # but adds the standard metrics handler.
+    spec["handlers"]["phlawg_metrics_handler"] = metric_handler_spec()
+    spec["version"] = 1
+    return spec, ()
+
+
+@override_case({
+    "loggers": {
+        "some_logger": mock_dict(),
+        "other_logger": mock_dict(),
+        },
+    "handlers": {
+        "some_handler": mock_dict(),
+        "other_handler": mock_dict(),
+        },
+    "formatters": {
+        "some_formatter": mock_dict(),
+        "other_formatter": mock_dict(),
+        },
+    })
+def test_override_with_no_metrics(spec, env, logconf):
+    # In this case, the override configuration doesn't deal with our metrics
+    # structures at all, so we expect the system to provide for them.
+    spec["loggers"]["metrics"] = metric_log_spec()
+    spec["handlers"]["phlawg_metrics_handler"] = metric_handler_spec()
+    spec["formatters"]["phlawg_metrics_formatter"] = metric_formatter_spec()
+    spec["version"] = 1
+    return spec, ()
 
