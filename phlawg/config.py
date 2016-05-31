@@ -8,6 +8,11 @@ import six
 import phlawg
 
 METRIC_HANDLER_KEY = 'phlawg_metrics_handler'
+METRIC_FORMATTER_KEY = 'phlawg_metrics_formatter'
+LOG_FORMATTER_KEY = 'phlawg_default_formatter'
+
+DEFAULT_METRIC_FIELDS = (
+    'asctime', 'name', 'levelname', 'process', 'thread', 'message')
 
 def metric_logger_specification(name):
     return {"qualname": name,
@@ -16,7 +21,12 @@ def metric_logger_specification(name):
             "handlers": [METRIC_HANDLER_KEY],
             }
 
-DEFAULT_CONFIG = {
+def metric_field_format(fields):
+    return ' '.join('(%s)' % fld for fld in fields)
+
+
+def default_config():
+    return {
         'loggers': {},
         'root': {
             'level': 'INFO',
@@ -25,7 +35,7 @@ DEFAULT_CONFIG = {
         'formatters': {
             'phlawg_metrics_formatter': {
                 '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
-                'format': '(asctime) (name) (levelname) (process) (thread) (message)',
+                'format': metric_field_format(DEFAULT_METRIC_FIELDS),
                 },
             'phlawg_default_formatter': {
                 'format': '%(asctime)s %(levelname)s #%(process)d %(thread)d %(name)s %(message)s'
@@ -49,34 +59,87 @@ def env_list(variable):
     val = os.getenv(variable)
     return val.split(',') if val else []
 
+
+def env_var(variable, default=None, handler=lambda x: x):
+    val = os.getenv(variable)
+    if val is not None and val != '':
+        return handler(val)
+    return default
+
+
 class EnvConf(object):
     METRIC_PACKAGES_VAR = 'PHLAWG_METRIC_PACKAGES'
     METRIC_FIELDS_VAR = 'PHLAWG_METRIC_FIELDS'
+    METRIC_DATE_FORMAT_VAR = 'PHLAWG_METRIC_DATE_FORMAT'
     LOG_FORMAT_VAR = 'PHLAWG_LOG_FORMAT'
     DATE_FORMAT_VAR = 'PHLAWG_LOG_DATE_FORMAT'
     FULL_CONF_VAR = 'PHLAWG_LOG_CONFIG'
 
     def __init__(self, metric_packages=()):
         self.metric_packages = self.determine_metric_packages(*metric_packages)
+        self.metric_fields = self.determine_metric_fields()
+        self.log_format = self.determine_log_format()
+        self.log_date_format = self.determine_log_date_format()
+        self.metric_date_format = self.determine_metric_date_format()
 
-    def determine_metric_packages(self, *app_metric_packages):
-        print "From environment:", env_list(self.METRIC_PACKAGES_VAR)
-        print "From app:", app_metric_packages
-        app_metric_packages += tuple(env_list(self.METRIC_PACKAGES_VAR))
+
+    @classmethod
+    def determine_metric_packages(cls, *app_metric_packages):
+        app_metric_packages += tuple(env_list(cls.METRIC_PACKAGES_VAR))
         if app_metric_packages:
             return [phlawg.to_metric_logger_name(name)
                     for name in app_metric_packages]
         return ['metrics']
 
 
+    @classmethod
+    def determine_metric_fields(cls):
+        return env_list(cls.METRIC_FIELDS_VAR)
+
+    @classmethod
+    def determine_log_format(cls):
+        return env_var(cls.LOG_FORMAT_VAR)
+
+    @classmethod
+    def determine_log_date_format(cls):
+        return env_var(cls.DATE_FORMAT_VAR)
+
+    @classmethod
+    def determine_metric_date_format(cls):
+        return env_var(cls.METRIC_DATE_FORMAT_VAR)
+
     def apply_metric_loggers(self, conf):
         for name in self.metric_packages:
             conf["loggers"][name] = metric_logger_specification(name)
 
+    def apply_metric_fields(self, conf):
+        if self.metric_fields:
+            conf["formatters"][METRIC_FORMATTER_KEY]['format'] = (
+                    metric_field_format(self.metric_fields))
+
+    def apply_log_format(self, conf):
+        if self.log_format:
+            conf["formatters"][LOG_FORMATTER_KEY]['format'] = self.log_format
+
+    def apply_log_date_format(self, conf):
+        if self.log_date_format:
+            conf["formatters"][LOG_FORMATTER_KEY]['datefmt'] = \
+                    self.log_date_format
+
+    def apply_metric_date_format(self, conf):
+        if self.metric_date_format:
+            conf["formatters"][METRIC_FORMATTER_KEY]['datefmt'] = \
+                    self.metric_date_format
+
+
     @property
     def config(self):
-        conf = dict((k, dict(v)) for k, v in six.iteritems(DEFAULT_CONFIG))
+        conf = default_config()
         self.apply_metric_loggers(conf)
+        self.apply_metric_fields(conf)
+        self.apply_log_format(conf)
+        self.apply_log_date_format(conf)
+        self.apply_metric_date_format(conf)
         conf['version'] = 1
         return conf
 

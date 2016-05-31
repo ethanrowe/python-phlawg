@@ -13,6 +13,7 @@ LOG_FORMAT_VAR = 'PHLAWG_LOG_FORMAT'
 DATE_FORMAT_VAR = 'PHLAWG_LOG_DATE_FORMAT'
 METRIC_FIELDS_VAR = 'PHLAWG_METRIC_FIELDS'
 METRIC_PACKAGES_VAR = 'PHLAWG_METRIC_PACKAGES'
+METRIC_DATE_FORMAT_VAR = 'PHLAWG_METRIC_DATE_FORMAT'
 
 ALL_VARS = [
         FULL_CONF_VAR, LOG_FORMAT_VAR, DATE_FORMAT_VAR,
@@ -160,4 +161,49 @@ def test_default_config_with_both_metric_names(env, logconf):
     # The app specifies two names.
     config.from_environment('appguy', 'app.other')
     comparable_call(logconf, expect)
+
+
+@mocks
+def test_metric_fields_var(env, logconf):
+    fields = ['some', 'other', 'fields']
+    # We express the desired fields in a comma-separated list.
+    env[METRIC_FIELDS_VAR] = ','.join(fields)
+    expect = default_config()
+    # And in the log formatter, the JsonFormatter just needs to see
+    # the field names in parentheses.
+    expect['formatters']['phlawg_metrics_formatter']['format'] = \
+            ' '.join('(%s)' % fld for fld in fields)
+    config.from_environment()
+    comparable_call(logconf, expect)
+
+
+@mocks
+def test_log_format_var(env, logconf):
+    format_str = str(mock.Mock(name='AFakeLogFormatString'))
+    env[LOG_FORMAT_VAR] = format_str
+    expect = default_config()
+    expect['formatters']['phlawg_default_formatter']['format'] = format_str
+    config.from_environment()
+    comparable_call(logconf, expect)
+
+
+@mocks
+def test_date_format_var(env, logconf):
+    fmt = str(mock.Mock(name='AFakeDateFormatString'))
+    env[DATE_FORMAT_VAR] = fmt
+    expect = default_config()
+    expect['formatters']['phlawg_default_formatter']['datefmt'] = fmt
+    config.from_environment()
+    comparable_call(logconf, expect)
+
+
+@mocks
+def test_metric_date_format_var(env, logconf):
+    fmt = str(mock.Mock(name='AnotherFakeDateFormatString'))
+    env[METRIC_DATE_FORMAT_VAR] = fmt
+    expect = default_config()
+    expect['formatters']['phlawg_metrics_formatter']['datefmt'] = fmt
+    config.from_environment()
+    comparable_call(logconf, expect)
+
 
