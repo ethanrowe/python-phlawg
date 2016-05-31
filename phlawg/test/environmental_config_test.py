@@ -1,5 +1,4 @@
 import os
-import functools
 import json
 from nose import tools
 import mock
@@ -83,7 +82,7 @@ def default_config():
 
 
 def mocks(fn):
-    @functools.wraps(fn)
+    @six.wraps(fn)
     def wrapped(*a, **kw):
         with mock.patch.dict(os.environ):
             with mock.patch('logging.config.dictConfig') as dictconf:
@@ -233,7 +232,7 @@ def mock_dict():
 
 def override_case(spec):
     def wrapper(fn):
-        @functools.wraps(fn)
+        @six.wraps(fn)
         @mocks
         def wrapped(env, logconf):
             # Put the specification into the variable as JSON.
