@@ -15,6 +15,8 @@ DATE_FORMAT_VAR = 'PHLAWG_LOG_DATE_FORMAT'
 METRIC_FIELDS_VAR = 'PHLAWG_METRIC_FIELDS'
 METRIC_PACKAGES_VAR = 'PHLAWG_METRIC_PACKAGES'
 METRIC_DATE_FORMAT_VAR = 'PHLAWG_METRIC_DATE_FORMAT'
+LOG_LEVEL_VAR = 'PHLAWG_LOG_LEVEL'
+METRIC_LEVEL_VAR = 'PHLAWG_METRIC_LEVEL'
 
 ALL_VARS = [
         FULL_CONF_VAR, LOG_FORMAT_VAR, DATE_FORMAT_VAR,
@@ -123,6 +125,22 @@ def test_default_config(env, logconf):
     config.from_environment()
     comparable_call(logconf, default_config())
 
+@mocks
+def test_log_level(env, logconf):
+    env[LOG_LEVEL_VAR] = str(mock.Mock(name='SomeLogLevelName'))
+    config.from_environment()
+    expect = default_config()
+    expect["handlers"]["phlawg_default_handler"]["level"] = env[LOG_LEVEL_VAR]
+    comparable_call(logconf, expect)
+
+@mocks
+def test_metric_level(env, logconf):
+    env[METRIC_LEVEL_VAR] = str(mock.Mock(name='SomeLogLevelName'))
+    config.from_environment()
+    expect = default_config()
+    expect["handlers"]["phlawg_metrics_handler"]["level"] = \
+            env[METRIC_LEVEL_VAR]
+    comparable_call(logconf, expect)
 
 @mocks
 def test_default_config_with_app_metric_names(env, logconf):

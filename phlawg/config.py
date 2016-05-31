@@ -14,6 +14,7 @@ import phlawg
 
 METRIC_HANDLER_KEY = 'phlawg_metrics_handler'
 METRIC_FORMATTER_KEY = 'phlawg_metrics_formatter'
+LOG_HANDLER_KEY = 'phlawg_default_handler'
 LOG_FORMATTER_KEY = 'phlawg_default_formatter'
 
 DEFAULT_METRIC_FIELDS = (
@@ -80,15 +81,19 @@ class EnvConf(object):
     METRIC_PACKAGES_VAR = 'PHLAWG_METRIC_PACKAGES'
     METRIC_FIELDS_VAR = 'PHLAWG_METRIC_FIELDS'
     METRIC_DATE_FORMAT_VAR = 'PHLAWG_METRIC_DATE_FORMAT'
+    METRIC_LEVEL_VAR = 'PHLAWG_METRIC_LEVEL'
     LOG_FORMAT_VAR = 'PHLAWG_LOG_FORMAT'
     DATE_FORMAT_VAR = 'PHLAWG_LOG_DATE_FORMAT'
+    LOG_LEVEL_VAR = 'PHLAWG_LOG_LEVEL'
     FULL_CONF_VAR = 'PHLAWG_LOG_CONFIG'
 
     def __init__(self, metric_packages=()):
         self.metric_packages = self.determine_metric_packages(*metric_packages)
         self.metric_fields = self.determine_metric_fields()
+        self.metric_level = self.determine_metric_level()
         self.log_format = self.determine_log_format()
         self.log_date_format = self.determine_log_date_format()
+        self.log_level = self.determine_log_level()
         self.metric_date_format = self.determine_metric_date_format()
         self.specification = self.determine_specification()
 
@@ -127,6 +132,14 @@ class EnvConf(object):
         return env_list(cls.METRIC_FIELDS_VAR)
 
     @classmethod
+    def determine_metric_level(cls):
+        return env_var(cls.METRIC_LEVEL_VAR)
+
+    @classmethod
+    def determine_log_level(cls):
+        return env_var(cls.LOG_LEVEL_VAR)
+
+    @classmethod
     def determine_log_format(cls):
         return env_var(cls.LOG_FORMAT_VAR)
 
@@ -147,6 +160,14 @@ class EnvConf(object):
         if self.metric_fields:
             conf["formatters"][METRIC_FORMATTER_KEY]['format'] = (
                     metric_field_format(self.metric_fields))
+
+    def apply_metric_level(self, conf):
+        if self.metric_level:
+            conf["handlers"][METRIC_HANDLER_KEY]['level'] = self.metric_level
+
+    def apply_log_level(self, conf):
+        if self.log_level:
+            conf["handlers"][LOG_HANDLER_KEY]['level'] = self.log_level
 
     def apply_log_format(self, conf):
         if self.log_format:
@@ -169,6 +190,8 @@ class EnvConf(object):
         self.apply_metric_loggers(conf)
         if not self.specification:
             self.apply_metric_fields(conf)
+            self.apply_metric_level(conf)
+            self.apply_log_level(conf)
             self.apply_log_format(conf)
             self.apply_log_date_format(conf)
             self.apply_metric_date_format(conf)
@@ -193,10 +216,14 @@ def from_environment(*metric_packages):
         ``PHLAWG_METRIC_DATE_FORMAT``: The date formatting string to use for the
             time field within metric logs.
 
+        ``PHLAWG_METRIC_LEVEL``: The logging level name to use for metric logs.
+
         ``PHLAWG_LOG_FORMAT``: The log format string to use for regular log lines.
 
         ``PHLAWG_LOG_DATE_FORMAT``: The date formatting string to use for the
             time field within regular logs.
+
+        ``PHLAWG_LOG_LEVEL``: The logging level name to use for regular logs.
 
         ``PHLAWG_LOG_CONFIG``: a full log configuration dictionary as would be
             passed to :func:`logging.config.dictConfig`, encoded as JSON.  Note
@@ -216,6 +243,8 @@ def from_environment(*metric_packages):
 
     Metric loggers will use the :class:`pythonjsonlogger.jsonlogger.JsonFormatter`
     formatter to express themselves as JSON dictionaries in the logstream.
+
+    Logging levels are applied to the log handlers, not the loggers themselves.
 
     All logs will go to STDERR by default.
 
