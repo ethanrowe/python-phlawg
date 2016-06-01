@@ -1,6 +1,8 @@
 python-phlawg
 =============
 
+[![Build Status](https://travis-ci.org/ethanrowe/python-phlawg.svg)](https://travis-ci.org/ethanrowe/python-phlawg)
+
 Python utilities for distributing metrics within log streams.
 
 ## Get configuration from environment
