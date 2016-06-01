@@ -6,8 +6,6 @@ import six
 
 from phlawg import config
 
-tools.assert_equal.im_class.maxDiff = None
-
 FULL_CONF_VAR = 'PHLAWG_LOG_CONFIG'
 LOG_FORMAT_VAR = 'PHLAWG_LOG_FORMAT'
 DATE_FORMAT_VAR = 'PHLAWG_LOG_DATE_FORMAT'
