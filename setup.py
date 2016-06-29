@@ -3,7 +3,7 @@ import os
 
 setup(
     name = "phlawg",
-    version = "0.3.0",
+    version = "0.4.0",
     author = "Ethan Rowe",
     author_email = "ethan@the-rowes.com",
     description = "python logging utilities for transmitting metrics via log streams",
