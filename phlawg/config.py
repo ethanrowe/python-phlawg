@@ -241,6 +241,10 @@ def from_environment(*metric_packages):
 
         ``PHLAWG_LOG_LEVEL``: The logging level name to use for regular logs.
 
+        ``PHLAWG_DISABLE_EXISTING``: If non-blank, existing loggers will be
+            disabled.  If blank (the default), existing loggers are left
+            enabled.
+
         ``PHLAWG_LOG_CONFIG``: a full log configuration dictionary as would be
             passed to :func:`logging.config.dictConfig`, encoded as JSON.  Note
             that this will be subject to some modification; the
