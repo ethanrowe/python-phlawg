@@ -45,6 +45,7 @@ def metric_field_format(fields):
 def default_config():
     return {
         'loggers': {},
+        'disable_existing_loggers': 0,
         'root': {
             'level': 'INFO',
             'handlers': ['phlawg_default_handler'],
@@ -77,6 +78,10 @@ def env_var(variable, default=None, handler=lambda x: x):
     return default
 
 
+def env_flag(variable):
+    return len(env_var(variable, default='')) > 0
+
+
 class EnvConf(object):
     METRIC_PACKAGES_VAR = 'PHLAWG_METRIC_PACKAGES'
     METRIC_FIELDS_VAR = 'PHLAWG_METRIC_FIELDS'
@@ -86,6 +91,7 @@ class EnvConf(object):
     DATE_FORMAT_VAR = 'PHLAWG_LOG_DATE_FORMAT'
     LOG_LEVEL_VAR = 'PHLAWG_LOG_LEVEL'
     FULL_CONF_VAR = 'PHLAWG_LOG_CONFIG'
+    DISABLE_EXISTING_VAR = 'PHLAWG_DISABLE_EXISTING'
 
     def __init__(self, metric_packages=()):
         self.metric_packages = self.determine_metric_packages(*metric_packages)
@@ -95,6 +101,7 @@ class EnvConf(object):
         self.log_date_format = self.determine_log_date_format()
         self.log_level = self.determine_log_level()
         self.metric_date_format = self.determine_metric_date_format()
+        self.disable_existing = self.determine_disable_existing()
         self.specification = self.determine_specification()
 
 
@@ -151,6 +158,14 @@ class EnvConf(object):
     def determine_metric_date_format(cls):
         return env_var(cls.METRIC_DATE_FORMAT_VAR)
 
+    @classmethod
+    def determine_disable_existing(cls):
+        return env_flag(cls.DISABLE_EXISTING_VAR)
+
+    def apply_disable_existing(self, conf):
+        if self.disable_existing:
+            conf["disable_existing_loggers"] = 1
+
     def apply_metric_loggers(self, conf):
         for name in self.metric_packages:
             if name not in conf["loggers"]:
@@ -189,6 +204,7 @@ class EnvConf(object):
         conf = self.specification if self.specification else default_config()
         self.apply_metric_loggers(conf)
         if not self.specification:
+            self.apply_disable_existing(conf)
             self.apply_metric_fields(conf)
             self.apply_metric_level(conf)
             self.apply_log_level(conf)

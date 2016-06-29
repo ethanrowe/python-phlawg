@@ -14,10 +14,11 @@ METRIC_PACKAGES_VAR = 'PHLAWG_METRIC_PACKAGES'
 METRIC_DATE_FORMAT_VAR = 'PHLAWG_METRIC_DATE_FORMAT'
 LOG_LEVEL_VAR = 'PHLAWG_LOG_LEVEL'
 METRIC_LEVEL_VAR = 'PHLAWG_METRIC_LEVEL'
+DISABLE_EXISTING_VAR = 'PHLAWG_DISABLE_EXISTING'
 
 ALL_VARS = [
         FULL_CONF_VAR, LOG_FORMAT_VAR, DATE_FORMAT_VAR,
-        METRIC_FIELDS_VAR, METRIC_PACKAGES_VAR]
+        METRIC_FIELDS_VAR, METRIC_PACKAGES_VAR, DISABLE_EXISTING_VAR]
 
 DEFAULT_FORMAT = '%(asctime)s %(levelname)s #%(process)d %(thread)d %(name)s ' \
         '%(message)s'
@@ -64,6 +65,7 @@ def metric_formatter_spec(format=METRIC_FORMAT, **kw):
 def default_config():
     return {
         "version": 1,
+        "disable_existing_loggers": 0,
         "root": default_log_spec(),
         "loggers": {
             "metrics": metric_log_spec(),
@@ -137,6 +139,32 @@ def test_metric_level(env, logconf):
     expect = default_config()
     expect["handlers"]["phlawg_metrics_handler"]["level"] = \
             env[METRIC_LEVEL_VAR]
+    comparable_call(logconf, expect)
+
+@mocks
+def test_disable_flag(env, logconf):
+    env[DISABLE_EXISTING_VAR] = '1'
+    config.from_environment()
+    expect = default_config()
+    expect["disable_existing_loggers"] = 1
+    comparable_call(logconf, expect)
+
+@mocks
+def test_disable_flag_nonempty(env, logconf):
+    env[DISABLE_EXISTING_VAR] = ' '
+    config.from_environment()
+    expect = default_config()
+    expect["disable_existing_loggers"] = 1
+    comparable_call(logconf, expect)
+
+@mocks
+def test_disable_flag_zero(env, logconf):
+    # Any non-blank value in the variable, at all, results in activation
+    # of the flag.
+    env[DISABLE_EXISTING_VAR] = '0'
+    config.from_environment()
+    expect = default_config()
+    expect["disable_existing_loggers"] = 1
     comparable_call(logconf, expect)
 
 @mocks
