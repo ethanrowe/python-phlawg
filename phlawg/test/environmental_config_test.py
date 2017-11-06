@@ -1,9 +1,11 @@
+import logging
 import os
 import json
 from nose import tools
 import mock
 import six
 
+import phlawg
 from phlawg import config
 
 FULL_CONF_VAR = 'PHLAWG_LOG_CONFIG'
@@ -34,7 +36,7 @@ METRIC_FORMAT = '(asctime) (name) (levelname) (process) (thread) (message)'
 # the logs, each with their own handlers.  We have a "phlawg_"
 # prefix so we can isolate things.
 def default_log_spec(handlers=['phlawg_default_handler'],
-        level='INFO', **kw):
+        level='DEBUG', **kw):
     return dict(kw, handlers=handlers, level=level)
 
 def metric_log_spec(handlers=['phlawg_metrics_handler'], propagate=False,
@@ -43,10 +45,10 @@ def metric_log_spec(handlers=['phlawg_metrics_handler'], propagate=False,
         **dict(kw, handlers=handlers, propagate=propagate, qualname=qualname))
 
 def default_handler_spec(formatter='phlawg_default_formatter',
-        stream='ext://sys.stderr', **kw):
+        stream='ext://sys.stderr', level='INFO', **kw):
     if 'class' not in kw:
         kw['class'] = 'logging.StreamHandler'
-    return dict(kw, formatter=formatter, stream=stream)
+    return dict(kw, formatter=formatter, stream=stream, level=level)
 
 def metric_handler_spec(formatter='phlawg_metrics_formatter', **kw):
     return default_handler_spec(**dict(kw, formatter=formatter))
@@ -391,3 +393,56 @@ def test_override_with_no_metrics(spec, env, logconf):
     spec["version"] = 1
     return spec, ()
 
+
+def try_log(expected, fn, *args, **kwargs):
+    """
+    Calls the `fn` logging function and determines whether something was actually attempted to be written
+    by overriding the low-level `logging.StreamHandler.emit` method.
+    """
+    with mock.patch('logging.StreamHandler.emit') as emitter:
+        fn(*args, **kwargs)
+        tools.assert_equal(emitter.call_count > 0, expected)
+
+
+@mock.patch.dict(os.environ)
+def try_log_levels(log_level, metric_level,
+                   exp_log_warn, exp_log_info, exp_log_debug, exp_metric_warn, exp_metric_info, exp_metric_debug):
+    for var in ALL_VARS:
+        if var in os.environ:
+            del os.environ[var]
+    if log_level:
+        os.environ[LOG_LEVEL_VAR] = log_level
+    if metric_level:
+        os.environ[METRIC_LEVEL_VAR] = metric_level
+    config.from_environment('spaz')
+    metric = phlawg.MetricLogger(logging.getLogger(phlawg.to_metric_logger_name('spaz')))
+    try_log(exp_log_warn, logging.warn, 'hello')
+    try_log(exp_log_info, logging.info, 'hello')
+    try_log(exp_log_debug, logging.debug, 'hello')
+    try_log(exp_metric_warn, metric.warn, greeting='hello')
+    try_log(exp_metric_info, metric.info, greeting='hello')
+    try_log(exp_metric_debug, metric.debug, greeting='hello')
+
+
+def test_log_levels():
+    tests = [
+        # log_l    met_l   explw  expli  expld  expmw  expmi  expmd
+        [None,     None,   True,  True,  False, True,  True,  False],
+        [None,    'WARN',  True,  True,  False, True,  False, False],
+        [None,    'INFO',  True,  True,  False, True,  True,  False],
+        [None,    'DEBUG', True,  True,  False, True,  True,  True],
+        ['WARN',   None,   True,  False, False, True,  True,  False],
+        ['WARN',  'WARN',  True,  False, False, True,  False, False],
+        ['WARN',  'INFO',  True,  False, False, True,  True,  False],
+        ['WARN',  'DEBUG', True,  False, False, True,  True,  True],
+        ['INFO',   None,   True,  True,  False, True,  True,  False],
+        ['INFO',  'WARN',  True,  True,  False, True,  False, False],
+        ['INFO',  'INFO',  True,  True,  False, True,  True,  False],
+        ['INFO',  'DEBUG', True,  True,  False, True,  True,  True],
+        ['DEBUG',  None,   True,  True,  True,  True,  True,  False],
+        ['DEBUG', 'WARN',  True,  True,  True,  True,  False, False],
+        ['DEBUG', 'INFO',  True,  True,  True,  True,  True,  False],
+        ['DEBUG', 'DEBUG', True,  True,  True,  True,  True,  True],
+    ]
+    for log_l, met_l, explw, expli, expld, expmw, expmi, expmd in tests:
+        yield try_log_levels, log_l, met_l, explw, expli, expld, expmw, expmi, expmd

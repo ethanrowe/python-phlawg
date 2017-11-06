@@ -22,7 +22,7 @@ DEFAULT_METRIC_FIELDS = (
 
 def metric_logger_specification(name):
     return {"qualname": name,
-            "level": "INFO",
+            "level": "DEBUG",
             "propagate": False,
             "handlers": [METRIC_HANDLER_KEY],
             }
@@ -36,6 +36,7 @@ def metric_handler_specification():
     return {'formatter': 'phlawg_metrics_formatter',
             'class': 'logging.StreamHandler',
             'stream': 'ext://sys.stderr',
+            'level': 'INFO',
             }
 
 def metric_field_format(fields):
@@ -47,7 +48,7 @@ def default_config():
         'loggers': {},
         'disable_existing_loggers': 0,
         'root': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'handlers': ['phlawg_default_handler'],
             },
         'formatters': {
@@ -62,6 +63,7 @@ def default_config():
                 'formatter': 'phlawg_default_formatter',
                 'class': 'logging.StreamHandler',
                 'stream': 'ext://sys.stderr',
+                'level': 'INFO',
                 },
             },
         }
@@ -272,4 +274,3 @@ def from_environment(*metric_packages):
     """
     logconf.dictConfig(EnvConf(metric_packages).config)
     return True
-
